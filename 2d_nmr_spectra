@@ -1,0 +1,78 @@
+#!
+
+import pandas as pd
+import numpy as np
+import scipy as sp
+import matplotlib
+from matplotlib import pyplot as plt
+import matplotlib.cm as cm
+import nmrglue as ng
+
+
+#PROJECT_DIR = "/home/tsarev/fids/Lhcd-A/LchA_15N_H2O_800/41/pdata/1/"
+PROJECT_DIR ="D:\\NMR\\LchA\\fids\\Lhcd-A\\Lhcd-A_15N_DPC_800\\274\\pdata\\1"
+CONTOUR_PARAMS = {
+    "contour_start": 10000,
+    "contour_num": 32,
+    "contour_factor": 1.3
+}
+X_LIM = [10.5, 6.7]
+Y_LIM = [128,106.7]
+X_LABEL = "$^1$H (ppm)"
+Y_LABEL = "$^{15}$N (ppm)"
+PLOT_LABEL = "LchA"
+
+def print_bruker_2D(folder, contour_params):
+
+    contour_start = contour_params["contour_start"]
+    contour_num = contour_params["contour_num"]
+    contour_factor = contour_params["contour_factor"]
+
+    dic, data = ng.bruker.read_pdata(folder)
+    udic = ng.bruker.guess_udic(dic, data)
+
+##    # the indirect dimension, real only frequency domain data
+##    udic[0]['complex'] = False
+##    udic[0]['time'] = False
+##    udic[0]['freq'] = True
+##    udic[0]['size'] = 2 * udic[0]['size']
+##
+##    # the direct dimension, real only frequency data
+##    udic[1]['complex'] = False
+##    udic[1]['time'] = False
+##    udic[1]['freq'] = True
+##    udic[1]['size'] = 2 * udic[1]['size'] #needs no adjustment because it is the direct dimension
+
+    C = ng.convert.converter()
+    C.from_bruker(dic, data, udic=udic)
+    dic, data = C.to_pipe()
+
+    dic, data = C.to_pipe()
+    uc_1h = ng.pipe.make_uc(dic, data, dim=1)
+    ppm_1h = uc_1h.ppm_scale()
+    ppm_1h_0, ppm_1h_1 = uc_1h.ppm_limits()
+    uc_15n = ng.pipe.make_uc(dic, data, dim=0)
+    ppm_15n = uc_15n.ppm_scale()
+    ppm_15n_0, ppm_15n_1 = uc_15n.ppm_limits()
+
+    cmap = matplotlib.cm.Blues_r
+    cl = contour_start * contour_factor ** np.arange(contour_num)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.contour(data, cl,
+                extent=(ppm_1h_0, ppm_1h_1, ppm_15n_0, ppm_15n_1), colors='black', figsize=(20, 20), dpi=80)
+    # decorate the axes
+    ax.set_ylabel(Y_LABEL, size=14)
+    ax.set_xlabel(X_LABEL, size=14)
+    ax.set_title(PLOT_LABEL)
+##    ax.set_xlim(ppm_1h_0, ppm_1h_1)
+##    ax.set_ylim(ppm_15n_0, ppm_15n_1)
+    ax.set_xlim(*X_LIM)
+    ax.set_ylim(*Y_LIM)
+    plt.yticks(size=13)
+    plt.xticks(size=13)
+
+   
+    plt.show()
+
+print_bruker_2D(PROJECT_DIR, CONTOUR_PARAMS)
